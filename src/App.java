@@ -124,4 +124,12 @@ public class App {
 		}
 		return s;
 	}
+	public static String retrieveCSVCell(String s) {
+		if(s.contains("\"")) {
+			// remove the leading and trailing double quotes, and replace any internal
+			// double quote-pairs (\"\") with only one. 
+			s = s.substring(1).substring(0, s.length()-2).replaceAll("\"\"", "\""); 
+		}
+		return s;
+	}
 }

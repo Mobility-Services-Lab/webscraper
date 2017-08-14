@@ -1,8 +1,13 @@
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.w3c.dom.NamedNodeMap;
+
 import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlElement;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
@@ -16,8 +21,9 @@ public class Scraper implements Runnable {
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
+		System.out.println("Scrapper started.");
 		getAppInfo(app);
+		System.out.println("Scrapper done");
 	}
 
 	/**
@@ -28,42 +34,26 @@ public class Scraper implements Runnable {
 		WebClient webClient = new WebClient();
 		try {
 			HtmlPage appPage = webClient.getPage(listing.getURL());
-			// System.out.println("name:" + );
-			listing.addDetail("Name", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/SPAN/DIV/DIV/DIV/DIV/H1", 10));
-			listing.addDetail("Subtitle",
-					getValuePersist(appPage, "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/SPAN/DIV/DIV/DIV/DIV/P", 1));
+			listing.addDetail("Name", getValuePersist(appPage, Conf.XPATH_APP_NAME, 10));
+			listing.addDetail("Subtitle", getValuePersist(appPage, Conf.XPATH_SUBTITLE, 1));
 			listing.addDetail("Number of Reviews",
-					getValuePersist(appPage, "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/SPAN/DIV/DIV/DIV/DIV/SPAN/P",
-							1).replaceAll("\\D+", "")); // TODO: remove the
-			listing.addDetail("Intro", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV/SPAN/DIV/DIV/DIV/P[2]/SPAN", 1));
-			listing.addDetail("Release date", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV/SPAN/DIV/DIV/DIV[2]/SPAN/P", 1));
-			listing.addDetail("Pricing", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV/SPAN/DIV/DIV/DIV[2]/SPAN[2]/STRONG/SPAN",
-					1));
-			listing.addDetail("Categories", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV/SPAN/DIV/DIV/DIV[2]/SPAN[3]/SPAN/P",
-					1));
-			String producer = getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV/SPAN/DIV/DIV/DIV/P/B", 1)
-							.replaceFirst("App by ", "");
+					getValuePersist(appPage, Conf.XPATH_REVIEW_NUMBER,
+							1).replaceAll("\\D+", ""));
+			listing.addDetail("Intro", getValuePersist(appPage, Conf.XPATH_INTRO, 1));
+			listing.addDetail("Release date", getValuePersist(appPage, Conf.XPATH_RELEASE_DATE, 1));
+			listing.addDetail("Pricing", getValuePersist(appPage, Conf.XPATH_PRICING, 1));
+			listing.addDetail("Categories", getValuePersist(appPage, Conf.XPATH_CATEGORIES, 1));
+			String producer = getValuePersist(appPage, Conf.XPATH_PRODUCER, 1).replaceFirst("App by ", "");
 			listing.addDetail("Producer", producer);
 
 			// click on the detail button.
-			appPage = ((HtmlElement) appPage
-					.getByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV/DIV/UL/LI[2]/A").get(0)).click();
+			appPage = ((HtmlElement) appPage.getByXPath(Conf.XPATH_DETAIL_TAB).get(0)).click();
 
-			//long startTime = System.currentTimeMillis();			
-			listing.addDetail("Details", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[2]/SPAN/DIV/DIV/DIV", 10));
-			///System.out.println("elapsed time by trying to get the detail page:" + (System.currentTimeMillis()-startTime) );
-			
-			for (Object contactInfo : appPage.getByXPath(
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[2]/SPAN/DIV[2]/DIV/DIV/DIV/DIV/P/A")) {
+			listing.addDetail("Details", getValuePersist(appPage,Conf.XPATH_DETAILS, 10));
+
+			for (Object contactInfo : appPage.getByXPath(Conf.XPATH_WEBSITE_OR_EMAIL)) {
 				try {
-					if (((HtmlElement) contactInfo).asText().toLowerCase().contains("website")) { // todo: company website is listed in the provider page for sure. also try to fill the data over there.
+					if (((HtmlElement) contactInfo).asText().toLowerCase().contains("website")) {
 						listing.addDetail("Company Website", ((HtmlElement) contactInfo).getAttribute("href"));
 					}
 				} catch (Exception e) {
@@ -79,15 +69,9 @@ public class Scraper implements Runnable {
 				}
 			}
 
-			listing.addDetail("Sales Phone", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[2]/SPAN/DIV[2]/DIV/DIV/DIV/DIV/P/SPAN/SPAN",
-					1));
-			listing.addDetail("Editions", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[2]/SPAN/DIV[2]/DIV/SPAN/DIV/DIV[2]/DIV/UL/LI",
-					1).replaceFirst("Salesforce Editions: ", ""));
-			String techDetails = getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[2]/SPAN/DIV[2]/DIV/DIV[2]/DIV/DIV/UL",
-					1);
+			listing.addDetail("Sales Phone", getValuePersist(appPage,Conf.XPATH_SALES_PHONE, 1));
+			listing.addDetail("Salesforce Editions", getValuePersist(appPage,Conf.XPATH_SALESFORCE_EDITIONS, 1).replaceFirst("Salesforce Editions: ", ""));
+			String techDetails = getValuePersist(appPage,Conf.XPATH_TECH_DETAILS, 1);
 			// System.out.println("tech details:" + techDetails);
 			try {
 				Pattern pat = Pattern.compile("First Release: (.+?)(\r\n|\n|$)");// after industries, and before the end
@@ -131,19 +115,36 @@ public class Scraper implements Runnable {
 				e.printStackTrace();
 			}
 
-			listing.addDetail("Supported Features", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[2]/SPAN/DIV[2]/DIV/DIV[2]/SPAN/DIV", 1)
+			listing.addDetail("Supported Features", getValuePersist(appPage,Conf.XPATH_SUPPORTED_FEATURES, 1)
 							.replaceFirst("Supported Features\r\n", ""));
 			appPage = ((HtmlElement) appPage
-					.getByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV/DIV/UL/LI[4]/A").get(0)).click();
+					.getByXPath( Conf.XPATH_PROVIDER_TAB).get(0)).click();
 			// click on the PROVIDER tab.
-			Thread.sleep(1000);
-			listing.addDetail("About Provider", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[4]/SPAN/DIV[2]/DIV/SPAN/DIV/DIV/DIV/P/SPAN",
-					10));
-			//TODO: fix "ABout provider". it does not extract. maybe measure how long it takes to get the data, first.
-			String providerDetails = getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[4]/SPAN/DIV/DIV/DIV", 1);
+			Thread.sleep(3000);
+
+			getValuePersist(appPage,Conf.XPATH_SOMEWHERE_IN_PROVIDER_TAB,
+					10); // just to make sure that the page is loaded.
+			try {
+				listing.addDetail("About Provider", getValueFromXPathAndDescendants(appPage,Conf.XPATH_ABOUT_PROVIDER));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			try {
+				URL url = new URL(listing.getDetail("Company Website"));
+			} catch (Exception e) {
+				// the item is not a url. so try to get the company website, from another source
+				for (Anchor a : getDescendantAnchors(appPage,Conf.XPATH_PROVIDER_DETAILS
+						)) {
+					// System.out.println("a: " + a.href + " " + a.text);
+					if (a.text.trim().toLowerCase().contains("website")) {
+						// System.out.println("found the anchor:" + a.text);
+						listing.addDetail("Company Website", a.href);
+					}
+				}
+			}
+
+			String providerDetails = getValuePersist(appPage, Conf.XPATH_PROVIDER_DETAILS_INNER, 1);
+
 			try {
 				Pattern pat = Pattern.compile("Employees(\r\n|\n)(.+?)(\r\n|\n|$)");
 				Matcher mat = pat.matcher(providerDetails);
@@ -169,44 +170,37 @@ public class Scraper implements Runnable {
 				e.printStackTrace();
 			}
 			appPage = ((HtmlElement) appPage // click on the REVIEWS tab.
-					.getByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV/DIV/UL/LI[3]/A").get(0)).click();
+					.getByXPath(Conf.XPATH_REVIEWS_TAB).get(0)).click();
 
 			// waiting until the page loads.
-			getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/SPAN[2]/DIV[2]/DIV/H5", 10);
-			listing.addDetail("Rating", getValuePersist(appPage,
-					"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/DIV[2]/DIV/SPAN/SPAN/DIV/DIV/DIV[1]",
-					1));
+			getValuePersist(appPage, Conf.XPATH_SOMEWHERE_IN_REVIEWS_TAB, 10);
+			listing.addDetail("Rating", getValuePersist(appPage, Conf.XPATH_RATING_AVERAGE,	1));
 			try {
-			listing.addDetail("_5Stars", ((HtmlElement)appPage.getFirstByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/DIV[2]/DIV/SPAN/SPAN/DIV[2]/DIV/DIV[1]")).getAttribute("alt").replaceAll("5 Stars? : ", "").replaceAll(" reviews?", "") );
-			listing.addDetail("_4Stars", ((HtmlElement)appPage.getFirstByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/DIV[2]/DIV/SPAN/SPAN/DIV[2]/DIV/DIV[2]")).getAttribute("alt").replaceAll("4 Stars? : ", "").replaceAll(" reviews?", "") );
-			listing.addDetail("_3Stars", ((HtmlElement)appPage.getFirstByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/DIV[2]/DIV/SPAN/SPAN/DIV[2]/DIV/DIV[3]")).getAttribute("alt").replaceAll("3 Stars? : ", "").replaceAll(" reviews?", "") );
-			listing.addDetail("_2Stars", ((HtmlElement)appPage.getFirstByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/DIV[2]/DIV/SPAN/SPAN/DIV[2]/DIV/DIV[4]")).getAttribute("alt").replaceAll("2 Stars? : ", "").replaceAll(" reviews?", "") );
-			listing.addDetail("_1Stars", ((HtmlElement)appPage.getFirstByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/DIV[2]/DIV/SPAN/SPAN/DIV[2]/DIV/DIV[5]")).getAttribute("alt").replaceAll("1 Stars? : ", "").replaceAll(" reviews?", "") );
-			} catch(Exception e) {}
-			// try {
-			// Matcher mat = Pattern.compile("[0-9]+").matcher(ratingClass);
-			// if (mat.find()) {
-			// listing.addDetail("Rating", mat.group(0));
-			// }
-			// } catch (Exception e) {
-			// e.printStackTrace();
-			// }
-			// Thread.sleep(1000);
+				listing.addDetail("_5Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_5STARS))
+								.getAttribute("alt").replaceAll("5 Stars? : ", "").replaceAll(" reviews?", ""));
+				listing.addDetail("_4Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_4STARS))
+								.getAttribute("alt").replaceAll("4 Stars? : ", "").replaceAll(" reviews?", ""));
+				listing.addDetail("_3Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_3STARS))
+								.getAttribute("alt").replaceAll("3 Stars? : ", "").replaceAll(" reviews?", ""));
+				listing.addDetail("_2Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_2STARS))
+								.getAttribute("alt").replaceAll("2 Stars? : ", "").replaceAll(" reviews?", ""));
+				listing.addDetail("_1Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_1STARS))
+								.getAttribute("alt").replaceAll("1 Stars? : ", "").replaceAll(" reviews?", ""));
+			} catch (Exception e) {
+			}
 			getReviews(listing, appPage);
 			listing.setProcessed(true);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-//		System.out.println(listing);
 		synchronized (Main.bell) {
 			Main.bell.notify();
 		}
 	}
 
 	private void getReviews(App a, HtmlPage reviewPage) {
-		String ratingXPath = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/SPAN[2]/DIV[3]/DIV/SPAN/DIV/DIV/DIV/SPAN[2]/SPAN/P/SPAN";
-		String reviewXPath = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/SPAN[2]/DIV[3]/DIV/SPAN";
+		String ratingXPath = Conf.XPATH_RATING ;
+		String reviewXPath = Conf.XPATH_REVIEW;
 		boolean lastPage = false;
 		while (!lastPage) {
 			List<Object> reviews = reviewPage.getByXPath(reviewXPath);
@@ -215,37 +209,21 @@ public class Scraper implements Runnable {
 				HtmlElement review = ((HtmlElement) reviews.get(i));
 				Review r = new Review(review.asText());
 				try { // if the text is extended and hidden, let's get it.
-					// System.out.println("rev: " + review.getCanonicalXPath());
 					r.setContent(((HtmlElement) reviewPage
-							.getFirstByXPath(review.getCanonicalXPath() + "/DIV/DIV/DIV/SPAN[3]/SPAN[2]"))
+							.getFirstByXPath(review.getCanonicalXPath() + Conf.RELATIVE_XPATH_REVIEW_EXTENDED_CONTENT))
 									.getTextContent().replaceAll(" …More$", ""));
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
-				// r.writerName = ((HtmlElement) writerNames.get(i)).asText();
 				r.setRating(((HtmlElement) ratings.get(i)).getAttribute("class").replaceAll("\\D+", ""));
-				// r.headline = ((HtmlElement) headlines.get(i)).asText();
-				// r.content = ((HtmlElement) contents.get(i)).asText();
-				// r.date = ((HtmlElement) dates.get(i)).asText();
 				a.addReview(r);
 			}
-			// if(writerNames.size() == 0) {
-			// // If there is no reviews at all, getNextReviewPage can't perform it's
-			// persistent waiting.
-			// // Because it will hopelessly look for an element that does not exist.
-			// Therefore, quit sooner.
-			// System.out.println("no reviews seen. return..");
-			// return;
-			// }
 			try {
-				reviewPage = getNextReviewPage(reviewPage,
-						"/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/SPAN[2]/SPAN/DIV/DIV/DIV/SPAN/A");
+				reviewPage = getNextReviewPage(reviewPage, Conf.XPATH_NEXT_REVIEW_PAGE_BUTTON);
 			} catch (Exception e) {
 				lastPage = true;
 				e.printStackTrace();
 			}
-			//TODO : remove this.
-			lastPage = true;
 		}
 	}
 
@@ -268,39 +246,15 @@ public class Scraper implements Runnable {
 		List<Object> links = reviewsPage.getByXPath(xPath);
 		HtmlElement nextPageLink = (HtmlElement) links.get(links.size() - 1);
 
-		// HtmlElement nextPageLink = (HtmlElement)
-		// reviewsPage.getByXPath(xPath).get(0);
-		// HtmlElement nextPageLink = reviewsPage.getAnchorByText("Next Page");
-		// HtmlElement nextPageLink = reviewsPage.getFirstByXPath("/A[text()='Next
-		// Page']");
-		// System.out.println("getNextReviewPage: '" + nextPageLink.asText()+"'");
 		// if the found link does not read: "Next Page", it is probably the last page.
 		if (nextPageLink.asText().toLowerCase().trim().compareTo("next page") != 0) {
-			// System.out.println(nextPageLink.asText().toLowerCase().trim());
 			throw new Exception();
 		}
-
-		// reviewsPage = null;
 		HtmlPage newPage = nextPageLink.click();
 		Thread.sleep(10000);
-		// just persist to get this content on the page, to make sure it is loaded.
-		// String absurd = getValuePersist(reviewsPage,
-		// "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/SPAN[2]/SPAN/DIV/DIV/DIV/SPAN/A",
-		// 20); // the writer's name.
-
-		// for(int i = 0; i < 20; i++) {
-		// Thread.sleep(1000);
-		// List<Object> reviews =
-		// newPage.getByXPath("/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/SPAN[2]/DIV[3]/DIV/SPAN");
-		// System.out.print("." + reviews.size());
-		// if(reviews.size()>0)
-		// break;
-		// }
-		// Thread.sleep(1000);
-		// System.out.println("all the anchors:");
-		// for(HtmlAnchor a: newPage.getAnchors()) {
-		// System.out.print(a.asText() + " - ");
-		// }
+		for (HtmlAnchor a : newPage.getAnchors()) {
+			System.out.print(a.asText() + " - ");
+		}
 		return newPage;
 	}
 
@@ -350,4 +304,46 @@ public class Scraper implements Runnable {
 		return ((HtmlElement) appPage.getByXPath(xPath).get(0)).asText();
 	}
 
+	/**
+	 * Getting the text that is shown in the current element, and the text of it's descendants 
+	 * all together.
+	 * @param appPage
+	 * @param xPath
+	 * @return
+	 * @throws Exception
+	 */
+	private String getValueFromXPathAndDescendants(HtmlPage appPage, String xPath) throws Exception {
+		return ((HtmlElement) appPage.getByXPath(xPath).get(0)).getTextContent();
+	}
+
+	/**
+	 * Takes an xPath in a Page, and returns any Anchor elements that are its descendants.
+	 * @param appPage The page object.
+	 * @param xPath The path, pointing to the parent element.
+	 * @return An ArrayList of the found Anchors. Anchor is a class local to the Scraper file.
+	 */
+	private ArrayList<Anchor> getDescendantAnchors(HtmlPage appPage, String xPath) {
+		ArrayList<Anchor> anchors = new ArrayList<>();
+		for (DomNode element : ((HtmlElement) appPage.getByXPath(xPath).get(0)).getDescendants()) {
+
+			NamedNodeMap namedNodes = element.getAttributes();
+			for (int i = 0; i < namedNodes.getLength(); i++) {
+
+				if (namedNodes.item(i).getNodeName().equals("href")) {
+
+					Anchor a = new Anchor();
+					a.href = namedNodes.item(i).getNodeValue();
+					a.text = element.getTextContent();
+					anchors.add(a);
+					break;
+				}
+			}
+		}
+		return anchors;
+	}
+}
+
+class Anchor {
+	String text;
+	String href;
 }

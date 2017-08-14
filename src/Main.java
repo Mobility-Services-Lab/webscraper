@@ -1,59 +1,56 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import org.junit.Assert;
-import org.junit.Test;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.html.HtmlElement;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.javascript.background.JavaScriptJobManager;
 
 public class Main {
-	// Table apps;
-	// static WebClient webClient;
 	public static Object bell;
-	public static String initialURL = "https://appexchange.salesforce.com/";
-	public static String outputPath = "C:\\Users\\Neu\\Desktop";
-	public static String file = "hi.csv";
 
 	public static void main(String args[]) {
 		bell = new Object();
 		runMultiThread();
-		// App r = new App();
-		// r.setURL("https://appexchange.salesforce.com/listingDetail?listingId=a0N3000000B5cXCEAZ");
-		// new Scraper(r).getAppInfo(r);
 	}
 
+	/**
+	 * This function tries to get All the information of the apps in 
+	 * Salesforce. But it is highly configurable via the Conf file and 
+	 * variables from there. If the list of the Apps has already been
+	 * cached in a file in a previous run, set the Conf.appURLsCached
+	 * to true, so that this function fills the list of the apps from
+	 * the file and saves time.  The variable maxScrapingThreads shows
+	 * how many parallel threads should be used to grab the information.
+	 * Depending on the properties of the computer that this function 
+	 * runs on, threads could be higher or lower. 
+	 * @param appURLsCached
+	 */
 	public static void runMultiThread() {
+		long startTime = System.currentTimeMillis();
 		Scout scout = new Scout();
-		new Thread(scout).start();
-		int maxThreads = 3;
-		ExecutorService pool = Executors.newFixedThreadPool(maxThreads);
+		if (Conf.appURLsCached) {
+			scout.getURLsCached(); // use the cache file to load the URLs.
+		} else {
+			new Thread(scout).start(); // get the app URLs from scratch
+		}
+		ExecutorService pool = Executors.newFixedThreadPool(Conf.maxScrapingThreads);
 		int processedApps = 0;
 		while (true) {
-			if (processedApps < allApps.size()) {
+			while (processedApps < allApps.size()) {
 				Runnable scraper = new Scraper(allApps.get(processedApps));
 				pool.execute(scraper);
 				processedApps++;
-			}
-			if (processedApps == 4) { // temporary. TODO: remove this.
-				// System.out.println("12 apps processed. BREAK!");
-				break;
+				if(processedApps %100 == 0) {
+					System.out.println(processedApps+ "th App was assigned.");
+				}
+				System.out.println("Apps left for process: " + processedApps);
 			}
 			if (scout.finito && processedApps >= allApps.size()) {
-				// System.out.println("all apps processed. and Scout done. BREAK!");
 				break;
 			}
 			synchronized (bell) {
 				try {
-					bell.wait(10000);
+					bell.wait();
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -62,12 +59,18 @@ public class Main {
 		while (!pool.isTerminated()) {
 		}
 		System.out.println("All Done! Writing output..");
-		saveRows(outputPath, file);
+		saveRows(Conf.outputPath, Conf.file);
 		System.out.println("..saved.");
+		System.out.println("Total running time: " + ((System.currentTimeMillis()- startTime) / 1000.0 / 60) + " Minutes");
 	}
 
 	public static volatile ArrayList<App> allApps = new ArrayList<>();
-
+/**
+ * Save the content of allApps array in the given file. Also save all the 
+ * reviews of each app in a different file.
+ * @param path
+ * @param file
+ */
 	private static void saveRows(String path, String file) {
 		FileWriter writer = null;
 		try {
@@ -81,13 +84,15 @@ public class Main {
 			int i = 0; // to act as ID.
 			for (App a : allApps) {
 				i++;
+				if (!a.isProcessed())
+					continue;
 				System.out.println("saving app #" + i + ": " + a.getDetail("Name"));
 				if (a.isProcessed())
 					// System.out.println("writing app: " + a.getDetail("Name"));
 					writer.append(a.toCSVLine());
 				// write the reviews in a different file:
 				try {
-					FileWriter revWrite = new FileWriter(path + "\\revs\\" + i + " - " + a.getDetail("Name") + ".csv");
+					FileWriter revWrite = new FileWriter(path + Conf.cachedFolderPath + i + " - " + a.getDetail("Name").replaceAll("[^A-Za-z0-9 ]", " ") + ".csv");
 					for (Review r : a.getReviews()) {
 						revWrite.append(r.toCSVLine());
 					}
@@ -104,6 +109,7 @@ public class Main {
 			writer.close();
 
 		} catch (IOException e) {
+			
 			e.printStackTrace();
 		}
 	}
