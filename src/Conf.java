@@ -11,7 +11,7 @@ public class Conf {
 	/**
 	 * Make sure this folder exists in advance.
 	 */
-	public static String cachedFolderPath = "\\revs\\";
+	public static String reviewsFolderPath = "\\revs\\";
 	public static String XPATH_APPS = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV[2]/DIV/DIV/SPAN[2]/SPAN/UL/LI/SPAN/DIV[1]/DIV[1]/DIV[1]/DIV[3]/DIV[1]/A";
 //	caution:It points to more than one ANCHOR:
 	public static String XPATH_NEXT_PAGE_BUTTON = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV[3]/DIV/DIV/DIV/A";	

@@ -100,7 +100,7 @@ public class Main {
 					writer.append(a.toCSVLine());
 				// write the reviews in a different file:
 				try {
-					FileWriter revWrite = new FileWriter(path + Conf.cachedFolderPath + i + " - "
+					FileWriter revWrite = new FileWriter(path + Conf.reviewsFolderPath + i + " - "
 							+ a.getDetail("Name").replaceAll("[^A-Za-z0-9 ]", " ") + ".csv");
 					for (Review r : a.getReviews()) {
 						revWrite.append(r.toCSVLine());
