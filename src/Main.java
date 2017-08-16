@@ -6,6 +6,13 @@ import java.util.concurrent.Executors;
 
 public class Main {
 	public static Object bell;
+	/**
+	 * allApps array includes all the App objects that are listed to be processed or 
+	 * the ones that are already processed. Scrapers get instances of Apps in this 
+	 * list to fill the details in. It is assumed that each existing app in this list
+	 * at least has a valid value for the attribute URL.
+	 */
+	public static volatile ArrayList<App> allApps = new ArrayList<>();
 
 	public static void main(String args[]) {
 		bell = new Object();
@@ -13,15 +20,15 @@ public class Main {
 	}
 
 	/**
-	 * This function tries to get All the information of the apps in 
-	 * Salesforce. But it is highly configurable via the Conf file and 
-	 * variables from there. If the list of the Apps has already been
-	 * cached in a file in a previous run, set the Conf.appURLsCached
-	 * to true, so that this function fills the list of the apps from
-	 * the file and saves time.  The variable maxScrapingThreads shows
-	 * how many parallel threads should be used to grab the information.
-	 * Depending on the properties of the computer that this function 
-	 * runs on, threads could be higher or lower. 
+	 * This function tries to get All the information of the apps in Salesforce. But
+	 * it is highly configurable via the Conf file and variables from there. If the
+	 * list of the Apps has already been cached in a file in a previous run, set the
+	 * Conf.appURLsCached to true, so that this function fills the list of the apps
+	 * from the file and saves time. The variable maxScrapingThreads shows how many
+	 * parallel threads should be used to grab the information. Depending on the
+	 * properties of the computer that this function runs on, threads could be
+	 * higher or lower.
+	 * 
 	 * @param appURLsCached
 	 */
 	public static void runMultiThread() {
@@ -32,6 +39,7 @@ public class Main {
 		} else {
 			new Thread(scout).start(); // get the app URLs from scratch
 		}
+		// ---------------------------
 		ExecutorService pool = Executors.newFixedThreadPool(Conf.maxScrapingThreads);
 		int processedApps = 0;
 		while (true) {
@@ -39,8 +47,8 @@ public class Main {
 				Runnable scraper = new Scraper(allApps.get(processedApps));
 				pool.execute(scraper);
 				processedApps++;
-				if(processedApps %100 == 0) {
-					System.out.println(processedApps+ "th App was assigned.");
+				if (processedApps % 100 == 0) { // A report to see progress time to time.
+					System.out.println(processedApps + "th App was assigned.");
 				}
 				System.out.println("Apps left for process: " + processedApps);
 			}
@@ -61,16 +69,17 @@ public class Main {
 		System.out.println("All Done! Writing output..");
 		saveRows(Conf.outputPath, Conf.file);
 		System.out.println("..saved.");
-		System.out.println("Total running time: " + ((System.currentTimeMillis()- startTime) / 1000.0 / 60) + " Minutes");
+		System.out.println(
+				"Total running time: " + ((System.currentTimeMillis() - startTime) / 1000.0 / 60) + " Minutes");
 	}
 
-	public static volatile ArrayList<App> allApps = new ArrayList<>();
-/**
- * Save the content of allApps array in the given file. Also save all the 
- * reviews of each app in a different file.
- * @param path
- * @param file
- */
+	/**
+	 * Save the content of allApps array in the given file. Also save all the
+	 * reviews of each app in a different file.
+	 * 
+	 * @param path
+	 * @param file
+	 */
 	private static void saveRows(String path, String file) {
 		FileWriter writer = null;
 		try {
@@ -88,11 +97,11 @@ public class Main {
 					continue;
 				System.out.println("saving app #" + i + ": " + a.getDetail("Name"));
 				if (a.isProcessed())
-					// System.out.println("writing app: " + a.getDetail("Name"));
 					writer.append(a.toCSVLine());
 				// write the reviews in a different file:
 				try {
-					FileWriter revWrite = new FileWriter(path + Conf.cachedFolderPath + i + " - " + a.getDetail("Name").replaceAll("[^A-Za-z0-9 ]", " ") + ".csv");
+					FileWriter revWrite = new FileWriter(path + Conf.cachedFolderPath + i + " - "
+							+ a.getDetail("Name").replaceAll("[^A-Za-z0-9 ]", " ") + ".csv");
 					for (Review r : a.getReviews()) {
 						revWrite.append(r.toCSVLine());
 					}
@@ -109,7 +118,6 @@ public class Main {
 			writer.close();
 
 		} catch (IOException e) {
-			
 			e.printStackTrace();
 		}
 	}
