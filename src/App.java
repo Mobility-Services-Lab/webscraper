@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
-
+import utils.Status;
 public class App {
 	public static ArrayList<String> headers = new ArrayList<>(Arrays.asList("Name", "Subtitle", "Number of Reviews",
 			"Intro", "Release date", "Pricing", "Categories", "Rating", "Producer", "Details", "Company Website",
@@ -24,13 +24,13 @@ public class App {
 		addDetail("URL", uRL);
 	}
 
-	private boolean processed = false;
+	private Status processed = Status.OPEN;
 
-	public void setProcessed(boolean processed) {
-		this.processed = processed;
+	public void setStatus(Status stat) {
+		this.processed = stat;
 	}
 
-	public boolean isProcessed() {
+	public Status getStatus() {
 		return processed;
 	}
 
@@ -70,9 +70,9 @@ public class App {
 		// s+= "\t"+t.getKey()+": '"+t.getValue()+"',\n";
 		// }
 		s += "\treviews: (" + reviews.size() + ") [";
-		int i = 0;
+//		int i = 0;
 		for (Review rev : reviews) {
-			i++;
+//			i++;
 			s += "\n\t\t'" + rev + "',\n";
 //			if (i == 10) {
 //				s+= "and others...";

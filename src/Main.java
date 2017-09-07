@@ -1,22 +1,57 @@
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import utils.Status;
 
 public class Main {
-	public static Object bell;
+	public static Object bell = new Object();
 	/**
-	 * allApps array includes all the App objects that are listed to be processed or 
-	 * the ones that are already processed. Scrapers get instances of Apps in this 
-	 * list to fill the details in. It is assumed that each existing app in this list
-	 * at least has a valid value for the attribute URL.
+	 * allApps array includes all the App objects that are listed to be processed or
+	 * the ones that are already processed. Scrapers get instances of Apps in this
+	 * list to fill the details in. It is assumed that each existing app in this
+	 * list at least has a valid value for the attribute URL.
 	 */
-	public static volatile ArrayList<App> allApps = new ArrayList<>();
+	public static volatile MyLinkedMap<String, App> allApps = new MyLinkedMap();
 
 	public static void main(String args[]) {
-		bell = new Object();
-		runMultiThread();
+		 processMultipleApps();
+	}
+
+	/*
+	 * This app fetches the next app in the specified range in the configuration,
+	 * that is yet not processed.
+	 */
+	private static App getFirstUnprocessedApp() {
+		for (int i = Conf.START_INDEX; i < Conf.END_INDEX && i < allApps.size(); i++) {
+			if (allApps.getValue(i).getStatus() == Status.OPEN) {
+				System.out.println("getFirstUnprocessedApp: " + i + "th App: " + allApps.getValue(i).getURL());
+				return allApps.getValue(i);
+
+			}
+		}
+		System.out.println("getFirstUnprocessedApp:  No unprocessed Apps");
+		return null;
+	}
+
+	private static int getFirstFreeWorker(Thread[] workers) {
+		for (int i = 0; i < workers.length; i++) {
+			if (workers[i] == null || !workers[i].isAlive()) // idle worker
+			{
+				System.out.println("getFirstFreeWorker: " + " worker # " + i);
+				return i;
+			}
+		}
+		System.out.println("getFirstFreeWorker: " + " No workers Available");
+		return -1;
+	}
+
+	private static boolean allWorkersDone(Thread[] workers) {
+		for (int i = 0; i < workers.length; i++) {
+			if (workers[i].isAlive()) // busy worker
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -28,46 +63,45 @@ public class Main {
 	 * parallel threads should be used to grab the information. Depending on the
 	 * properties of the computer that this function runs on, threads could be
 	 * higher or lower.
-	 * 
-	 * @param appURLsCached
 	 */
-	public static void runMultiThread() {
+	public static void processMultipleApps() {
 		long startTime = System.currentTimeMillis();
+		// fetch URLs.
 		Scout scout = new Scout();
 		if (Conf.appURLsCached) {
-			scout.getURLsCached(); // use the cache file to load the URLs.
+			scout.fetchCachedApps(); // use the cache file to load the URLs.
 		} else {
 			new Thread(scout).start(); // get the app URLs from scratch
 		}
-		// ---------------------------
-		ExecutorService pool = Executors.newFixedThreadPool(Conf.maxScrapingThreads);
-		int processedApps = 0;
-		while (true) {
-			while (processedApps < allApps.size()) {
-				Runnable scraper = new Scraper(allApps.get(processedApps));
-				pool.execute(scraper);
-				processedApps++;
-				if (processedApps % 100 == 0) { // A report to see progress time to time.
-					System.out.println(processedApps + "th App was assigned.");
+		Thread[] workers = new Thread[Conf.maxScrapingThreads];
+		App nextApp = getFirstUnprocessedApp();
+		try {
+			while ((!scout.finito || nextApp != null || !allWorkersDone(workers))) {
+				int index = getFirstFreeWorker(workers);
+				if (index > -1 && nextApp != null) {
+					System.out.println("Assigning nextApp");
+					nextApp.setStatus(Status.ONGOING);
+					workers[index] = new Thread(new Scraper(nextApp));
+					workers[index].start();
+					Thread.yield();
+				} else { // no available workers
+					synchronized (bell) {
+						try {
+							bell.wait(60000); // wait for maximum 60 seconds
+							System.out.println("Just woke up");
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
 				}
-				System.out.println("Apps left for process: " + processedApps);
+				nextApp = getFirstUnprocessedApp();
 			}
-			if (scout.finito && processedApps >= allApps.size()) {
-				break;
-			}
-			synchronized (bell) {
-				try {
-					bell.wait();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		pool.shutdown();
-		while (!pool.isTerminated()) {
-		}
+		System.out.println("Scraping is done");
 		System.out.println("All Done! Writing output..");
-		saveRows(Conf.outputPath, Conf.file);
+		saveApps(Conf.outputPath, Conf.file, Conf.START_INDEX, Conf.END_INDEX);
 		System.out.println("..saved.");
 		System.out.println(
 				"Total running time: " + ((System.currentTimeMillis() - startTime) / 1000.0 / 60) + " Minutes");
@@ -75,51 +109,70 @@ public class Main {
 
 	/**
 	 * Save the content of allApps array in the given file. Also save all the
-	 * reviews of each app in a different file.
+	 * reviews of each App in a different file.
 	 * 
 	 * @param path
 	 * @param file
 	 */
-	private static void saveRows(String path, String file) {
+	private static void saveApps(String path, String file, int start, int end) {
 		FileWriter writer = null;
 		try {
-			writer = new FileWriter(path + "\\" + file);
+			writer = new FileWriter(path + "\\" + file, true);
 			String headerLine = "";
 			for (String header : App.headers) {
 				headerLine += header + ",";
 			}
 			headerLine += "\n";
 			writer.append(headerLine);
-			int i = 0; // to act as ID.
-			for (App a : allApps) {
-				i++;
-				if (!a.isProcessed())
-					continue;
-				System.out.println("saving app #" + i + ": " + a.getDetail("Name"));
-				if (a.isProcessed())
-					writer.append(a.toCSVLine());
-				// write the reviews in a different file:
-				try {
-					FileWriter revWrite = new FileWriter(path + Conf.reviewsFolderPath + i + " - "
-							+ a.getDetail("Name").replaceAll("[^A-Za-z0-9 ]", " ") + ".csv");
-					for (Review r : a.getReviews()) {
-						revWrite.append(r.toCSVLine());
-					}
-					revWrite.flush();
-					revWrite.close();
-				} catch (Exception e) {
-					e.printStackTrace();
-					System.out.println("could not write the reviews of the app: '" + i + " - " + a.getDetail("Name")
-							+ "' to the file");
-				}
-
-			}
 			writer.flush();
 			writer.close();
+			for (int i = start; i < end && i < allApps.size(); i++) {
+				saveApp(path, file, allApps.getValue(i), i);
+			}
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
+	private static void saveApp(String path, String file, App a, int number) {
+		System.out.println("saving app #" + number + ": " + a.getDetail("Name"));
+		FileWriter writer = null;
+		try {
+			writer = new FileWriter(path + "\\" + file, true);
+			writer.append(a.toCSVLine());
+			writer.flush();
+			writer.close();
+			saveReviews(path, a, number);
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("could not write " + number + "th app (or its reviews). - " + a.getDetail("Name")
+					+ "' to the file.");
+		}
+	}
+
+	private static void saveReviews(String path, App a, int number) throws IOException {
+		String name = a.getDetail("Name");
+		if (name != null)
+			name = name.replaceAll("[^A-Za-z0-9 ]", " ") + ".csv";
+		// i+1, because file names start from One, not Zero.
+		FileWriter revWrite = new FileWriter(path + Conf.reviewsFolderPath + (number + 1) + " - " + name);
+		for (Review r : a.getReviews()) {
+			revWrite.append(r.toCSVLine());
+		}
+		revWrite.flush();
+		revWrite.close();
+	}
+
+	private static void processSingleApp(String path, String file, int number) {
+		long startTime = System.currentTimeMillis();
+		Scout scout = new Scout();
+		scout.fetchCachedApps();
+		App a = allApps.getValue(number);
+		Scraper s = new Scraper();
+		s.getAppInfo(a);
+		saveApp(path, file, a, number);
+		System.out.println(
+				"Total running time: " + ((System.currentTimeMillis() - startTime) / 1000.0 / 60) + " Minutes");
+	}
 }

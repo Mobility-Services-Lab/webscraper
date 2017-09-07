@@ -12,6 +12,8 @@ import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlElement;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
+import utils.Status;
+
 public class Scraper implements Runnable {
 	App app;
 
@@ -19,10 +21,18 @@ public class Scraper implements Runnable {
 		this.app = app;
 	}
 
+	public Scraper() {
+		this.app = null;
+	}
+
 	@Override
 	public void run() {
 		System.out.println("Scrapper started.");
-		getAppInfo(app);
+		if (app != null) {
+			getAppInfo(app);
+		} else {
+			System.out.println("APP is null");
+		}
 		System.out.println("Scrapper done");
 	}
 
@@ -37,8 +47,7 @@ public class Scraper implements Runnable {
 			listing.addDetail("Name", getValuePersist(appPage, Conf.XPATH_APP_NAME, 10));
 			listing.addDetail("Subtitle", getValuePersist(appPage, Conf.XPATH_SUBTITLE, 1));
 			listing.addDetail("Number of Reviews",
-					getValuePersist(appPage, Conf.XPATH_REVIEW_NUMBER,
-							1).replaceAll("\\D+", ""));
+					getValuePersist(appPage, Conf.XPATH_REVIEW_NUMBER, 1).replaceAll("\\D+", ""));
 			listing.addDetail("Intro", getValuePersist(appPage, Conf.XPATH_INTRO, 1));
 			listing.addDetail("Release date", getValuePersist(appPage, Conf.XPATH_RELEASE_DATE, 1));
 			listing.addDetail("Pricing", getValuePersist(appPage, Conf.XPATH_PRICING, 1));
@@ -49,7 +58,7 @@ public class Scraper implements Runnable {
 			// click on the detail button.
 			appPage = ((HtmlElement) appPage.getByXPath(Conf.XPATH_DETAIL_TAB).get(0)).click();
 
-			listing.addDetail("Details", getValuePersist(appPage,Conf.XPATH_DETAILS, 10));
+			listing.addDetail("Details", getValuePersist(appPage, Conf.XPATH_DETAILS, 10));
 
 			for (Object contactInfo : appPage.getByXPath(Conf.XPATH_WEBSITE_OR_EMAIL)) {
 				try {
@@ -69,9 +78,10 @@ public class Scraper implements Runnable {
 				}
 			}
 
-			listing.addDetail("Sales Phone", getValuePersist(appPage,Conf.XPATH_SALES_PHONE, 1));
-			listing.addDetail("Salesforce Editions", getValuePersist(appPage,Conf.XPATH_SALESFORCE_EDITIONS, 1).replaceFirst("Salesforce Editions: ", ""));
-			String techDetails = getValuePersist(appPage,Conf.XPATH_TECH_DETAILS, 1);
+			listing.addDetail("Sales Phone", getValuePersist(appPage, Conf.XPATH_SALES_PHONE, 1));
+			listing.addDetail("Salesforce Editions", getValuePersist(appPage, Conf.XPATH_SALESFORCE_EDITIONS, 1)
+					.replaceFirst("Salesforce Editions: ", ""));
+			String techDetails = getValuePersist(appPage, Conf.XPATH_TECH_DETAILS, 1);
 			// System.out.println("tech details:" + techDetails);
 			try {
 				Pattern pat = Pattern.compile("First Release: (.+?)(\r\n|\n|$)");// after industries, and before the end
@@ -115,26 +125,25 @@ public class Scraper implements Runnable {
 				e.printStackTrace();
 			}
 
-			listing.addDetail("Supported Features", getValuePersist(appPage,Conf.XPATH_SUPPORTED_FEATURES, 1)
-							.replaceFirst("Supported Features\r\n", ""));
-			appPage = ((HtmlElement) appPage
-					.getByXPath( Conf.XPATH_PROVIDER_TAB).get(0)).click();
+			listing.addDetail("Supported Features", getValuePersist(appPage, Conf.XPATH_SUPPORTED_FEATURES, 1)
+					.replaceFirst("Supported Features\r\n", ""));
+			appPage = ((HtmlElement) appPage.getByXPath(Conf.XPATH_PROVIDER_TAB).get(0)).click();
 			// click on the PROVIDER tab.
 			Thread.sleep(3000);
 
-			getValuePersist(appPage,Conf.XPATH_SOMEWHERE_IN_PROVIDER_TAB,
-					10); // just to make sure that the page is loaded.
+			getValuePersist(appPage, Conf.XPATH_SOMEWHERE_IN_PROVIDER_TAB, 10); // just to make sure that the page is
+																				// loaded.
 			try {
-				listing.addDetail("About Provider", getValueFromXPathAndDescendants(appPage,Conf.XPATH_ABOUT_PROVIDER));
+				listing.addDetail("About Provider",
+						getValueFromXPathAndDescendants(appPage, Conf.XPATH_ABOUT_PROVIDER));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			try {
-				URL url = new URL(listing.getDetail("Company Website"));
+				new URL(listing.getDetail("Company Website"));
 			} catch (Exception e) {
 				// the item is not a url. so try to get the company website, from another source
-				for (Anchor a : getDescendantAnchors(appPage,Conf.XPATH_PROVIDER_DETAILS
-						)) {
+				for (Anchor a : getDescendantAnchors(appPage, Conf.XPATH_PROVIDER_DETAILS)) {
 					// System.out.println("a: " + a.href + " " + a.text);
 					if (a.text.trim().toLowerCase().contains("website")) {
 						// System.out.println("found the anchor:" + a.text);
@@ -174,23 +183,25 @@ public class Scraper implements Runnable {
 
 			// waiting until the page loads.
 			getValuePersist(appPage, Conf.XPATH_SOMEWHERE_IN_REVIEWS_TAB, 10);
-			listing.addDetail("Rating", getValuePersist(appPage, Conf.XPATH_RATING_AVERAGE,	1));
+			listing.addDetail("Rating", getValuePersist(appPage, Conf.XPATH_RATING_AVERAGE, 1));
 			try {
 				listing.addDetail("_5Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_5STARS))
-								.getAttribute("alt").replaceAll("5 Stars? : ", "").replaceAll(" reviews?", ""));
+						.getAttribute("alt").replaceAll("5 Stars? : ", "").replaceAll(" reviews?", ""));
 				listing.addDetail("_4Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_4STARS))
-								.getAttribute("alt").replaceAll("4 Stars? : ", "").replaceAll(" reviews?", ""));
+						.getAttribute("alt").replaceAll("4 Stars? : ", "").replaceAll(" reviews?", ""));
 				listing.addDetail("_3Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_3STARS))
-								.getAttribute("alt").replaceAll("3 Stars? : ", "").replaceAll(" reviews?", ""));
+						.getAttribute("alt").replaceAll("3 Stars? : ", "").replaceAll(" reviews?", ""));
 				listing.addDetail("_2Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_2STARS))
-								.getAttribute("alt").replaceAll("2 Stars? : ", "").replaceAll(" reviews?", ""));
+						.getAttribute("alt").replaceAll("2 Stars? : ", "").replaceAll(" reviews?", ""));
 				listing.addDetail("_1Stars", ((HtmlElement) appPage.getFirstByXPath(Conf.XPATH_1STARS))
-								.getAttribute("alt").replaceAll("1 Stars? : ", "").replaceAll(" reviews?", ""));
+						.getAttribute("alt").replaceAll("1 Stars? : ", "").replaceAll(" reviews?", ""));
 			} catch (Exception e) {
 			}
 			getReviews(listing, appPage);
-			listing.setProcessed(true);
+			listing.setStatus(Status.PROCESSED);
+			webClient.close();
 		} catch (Exception e) {
+			// listing.setStatus(Status.OPEN); // only if you want the scraping to happen again.
 			e.printStackTrace();
 		}
 		synchronized (Main.bell) {
@@ -199,7 +210,7 @@ public class Scraper implements Runnable {
 	}
 
 	private void getReviews(App a, HtmlPage reviewPage) {
-		String ratingXPath = Conf.XPATH_RATING ;
+		String ratingXPath = Conf.XPATH_RATING;
 		String reviewXPath = Conf.XPATH_REVIEW;
 		boolean lastPage = false;
 		while (!lastPage) {
@@ -252,9 +263,9 @@ public class Scraper implements Runnable {
 		}
 		HtmlPage newPage = nextPageLink.click();
 		Thread.sleep(10000);
-		for (HtmlAnchor a : newPage.getAnchors()) {
-			System.out.print(a.asText() + " - ");
-		}
+		// for (HtmlAnchor a : newPage.getAnchors()) {
+		// System.out.print(a.asText() + " - ");
+		// }
 		return newPage;
 	}
 
@@ -305,8 +316,9 @@ public class Scraper implements Runnable {
 	}
 
 	/**
-	 * Getting the text that is shown in the current element, and the text of it's descendants 
-	 * all together.
+	 * Getting the text that is shown in the current element, and the text of it's
+	 * descendants all together.
+	 * 
 	 * @param appPage
 	 * @param xPath
 	 * @return
@@ -317,10 +329,15 @@ public class Scraper implements Runnable {
 	}
 
 	/**
-	 * Takes an xPath in a Page, and returns any Anchor elements that are its descendants.
-	 * @param appPage The page object.
-	 * @param xPath The path, pointing to the parent element.
-	 * @return An ArrayList of the found Anchors. Anchor is a class local to the Scraper file.
+	 * Takes an xPath in a Page, and returns any Anchor elements that are its
+	 * descendants.
+	 * 
+	 * @param appPage
+	 *            The page object.
+	 * @param xPath
+	 *            The path, pointing to the parent element.
+	 * @return An ArrayList of the found Anchors. Anchor is a class local to the
+	 *         Scraper file.
 	 */
 	private ArrayList<Anchor> getDescendantAnchors(HtmlPage appPage, String xPath) {
 		ArrayList<Anchor> anchors = new ArrayList<>();
