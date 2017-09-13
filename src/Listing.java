@@ -3,7 +3,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 import utils.Status;
-public class App {
+public class Listing {
 	public static ArrayList<String> headers = new ArrayList<>(Arrays.asList("Name", "Subtitle", "Number of Reviews",
 			"Intro", "Release date", "Pricing", "Categories", "Rating", "Producer", "Details", "Company Website",
 			"Email", "Sales Phone", "Salesforce Editions", "First Release", "Latest Release", "Version", "Language(s)",
@@ -38,7 +38,7 @@ public class App {
 		return detail;
 	}
 
-	public App() {
+	public Listing() {
 		detail = new TreeMap<String, String>();
 		reviews = new ArrayList<>();
 	}

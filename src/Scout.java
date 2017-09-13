@@ -25,8 +25,8 @@ public class Scout implements Runnable {
 	@Override
 	public void run() {
 		long startTime = System.currentTimeMillis();
-		listAppURLs();
-		System.out.println("Scout done. Fetched " + Main.allApps.size() + " Apps.");
+		scoutListingURLs();
+		System.out.println("Scout done. Fetched " + Main.allListings.size() + " Listings.");
 		finito = true;
 		System.out.println(
 				"Scouting time: " + ((System.currentTimeMillis() - startTime) / 1000.0 / 60) + " Minutes");
@@ -35,10 +35,10 @@ public class Scout implements Runnable {
 	/**
 	 * Gets the URLs from the cache file. Path of the cachefile is in a class
 	 * attribute. Assumes that URLs are seperated with a '\r\n' character. Loads the
-	 * parsed caches into the allApps list of the Main class. It does NOT empty the
+	 * parsed caches into the allListings list of the Main class. It does NOT empty the
 	 * list in advance.
 	 */
-	public void fetchCachedApps() {
+	public void fetchCachedListings() {
 		try {
 			// FileWriter f = new FileWriter(filePath);
 			File f = new java.io.File(Conf.uRLsCachePath);
@@ -56,11 +56,11 @@ public class Scout implements Runnable {
 			fr.close();
 			String[] URLs = finalText.split("\r\n");
 			for (String url : URLs) {
-				App a = new App();
+				Listing a = new Listing();
 				a.setURL(url);
-				Main.allApps.put(url, a);
+				Main.allListings.put(url, a);
 			}
-			System.out.println(URLs.length + " Cached App URLs loaded.");
+			System.out.println(URLs.length + " Cached Listing URLs loaded.");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -68,7 +68,7 @@ public class Scout implements Runnable {
 	}
 
 	/**
-	 * saves the allApps array to the given path, with a '\r\n' as the separator.
+	 * saves the allListings array to the given path, with a '\r\n' as the separator.
 	 * 
 	 * @param filePath
 	 *            the path to the file where the URLs will be saved.
@@ -77,7 +77,7 @@ public class Scout implements Runnable {
 	private void saveURLsToDisc(String filePath) {
 		try {
 			FileWriter fw = new FileWriter(filePath);
-			for (Entry<String, App> item : Main.allApps.entrySet()) {
+			for (Entry<String, Listing> item : Main.allListings.entrySet()) {
 				fw.append(item.getKey() + "\r\n");
 			}
 			fw.flush();
@@ -88,7 +88,7 @@ public class Scout implements Runnable {
 
 	}
 
-	public void listAppURLs() {
+	public void scoutListingURLs() {
 		WebClient webClient = new WebClient();
 		HtmlPage page = null;
 		try {
@@ -97,16 +97,16 @@ public class Scout implements Runnable {
 				System.out.println("Scouting on: " + pageURL);
 				while (pageURL != null) {
 					page = webClient.getPage(pageURL);
-					List<String> appsInPage = getItemLinksInPage(page, Conf.XPATH_APPS);
-					for (String url : appsInPage) {
-						if (!Main.allApps.containsKey(url)) {
-							App app = new App();
-							app.setURL(url);
-							Main.allApps.put(url, app);
+					List<String> listingsInPage = getItemLinksInPage(page, Conf.XPATH_LISTINGS);
+					for (String url : listingsInPage) {
+						if (!Main.allListings.containsKey(url)) {
+							Listing listing = new Listing();
+							listing.setURL(url);
+							Main.allListings.put(url, listing);
 						}
 					}
 					System.out.println("URL:" + pageURL);
-					System.out.println(Main.allApps.size() + " Apps indexed by Scout so far.");
+					System.out.println(Main.allListings.size() + " Listings indexed by Scout so far.");
 					pageURL = getNextPageURL(page, Conf.XPATH_NEXT_PAGE_BUTTON);
 					synchronized (Main.bell) {
 						Main.bell.notify();

@@ -15,9 +15,9 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import utils.Status;
 
 public class Scraper implements Runnable {
-	App app;
+	Listing app;
 
-	public Scraper(App app) {
+	public Scraper(Listing app) {
 		this.app = app;
 	}
 
@@ -29,7 +29,7 @@ public class Scraper implements Runnable {
 	public void run() {
 		System.out.println("Scrapper started.");
 		if (app != null) {
-			getAppInfo(app);
+			getListingInfo(app);
 		} else {
 			System.out.println("APP is null");
 		}
@@ -40,11 +40,11 @@ public class Scraper implements Runnable {
 	 * Retrieves the intended data from the given url, puts in the App object
 	 * itself. Then rings the bell to wake the main thread.
 	 */
-	public void getAppInfo(App listing) {
+	public void getListingInfo(Listing listing) {
 		WebClient webClient = new WebClient();
 		try {
 			HtmlPage appPage = webClient.getPage(listing.getURL());
-			listing.addDetail("Name", getValuePersist(appPage, Conf.XPATH_APP_NAME, 10));
+			listing.addDetail("Name", getValuePersist(appPage, Conf.XPATH_LISTING_NAME, 10));
 			listing.addDetail("Subtitle", getValuePersist(appPage, Conf.XPATH_SUBTITLE, 1));
 			listing.addDetail("Number of Reviews",
 					getValuePersist(appPage, Conf.XPATH_REVIEW_NUMBER, 1).replaceAll("\\D+", ""));
@@ -209,7 +209,7 @@ public class Scraper implements Runnable {
 		}
 	}
 
-	private void getReviews(App a, HtmlPage reviewPage) {
+	private void getReviews(Listing a, HtmlPage reviewPage) {
 		String ratingXPath = Conf.XPATH_RATING;
 		String reviewXPath = Conf.XPATH_REVIEW;
 		boolean lastPage = false;

@@ -78,12 +78,12 @@ public class Review {
 	+ "\n}\n";
 	}
 	public String toCSVLine() {
-		return App.prepCSVCell(writerName)
-		+ "," + App.prepCSVCell(rating)
-		+ "," + App.prepCSVCell(headline)
-		+ "," + App.prepCSVCell(content)
-		+ "," + App.prepCSVCell(date)
-		+ "," + App.prepCSVCell(likes)
+		return Listing.prepCSVCell(writerName)
+		+ "," + Listing.prepCSVCell(rating)
+		+ "," + Listing.prepCSVCell(headline)
+		+ "," + Listing.prepCSVCell(content)
+		+ "," + Listing.prepCSVCell(date)
+		+ "," + Listing.prepCSVCell(likes)
 		+ "\n";
 	}
 }

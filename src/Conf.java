@@ -1,23 +1,29 @@
 
-public class Conf {
-	public static int readerBufferSize = 1024 * 1024;
-	public static String initialURL = "https://appexchange.salesforce.com/";
-	public static String outputPath = "C:\\Users\\Neu\\Desktop";
-	public static String uRLsCachePath = Conf.outputPath + "\\urls.csv";
+//import org.ini4j.Ini;
+import java.io.FileReader;
+import java.io.IOException;
 
-	public static String file = "result - 3000..3410.csv";
-	public static int maxScrapingThreads = 4;
-	public static boolean appURLsCached = true;
-	public static int START_INDEX = 3000;
-	public static int END_INDEX = 3410;
-	/**
-	 * Make sure this folder exists in advance.
-	 */
-	public static String reviewsFolderPath = "\\revs\\";
-	public static String XPATH_APPS = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV[2]/DIV/DIV/SPAN[2]/SPAN/UL/LI/SPAN/DIV[1]/DIV[1]/DIV[1]/DIV[3]/DIV[1]/A";
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+public class Conf {
+	private static String configFile = "./httpsappexchange.salesforce.com[slash]components.json";
+	public static int readerBufferSize = 1024 * 1024;
+	public static String uRLsCachePath;
+	public static String outputFile;
+	public static int scrapingThreads = 4; // default 4. OPTIONAL PARAM.
+	public static boolean URLsCached = false;
+	public static int START_INDEX; // starting from zero
+	public static int END_INDEX = Integer.MAX_VALUE; // default is the max value. OPTIONAL PARAM.
+	public static String[] INITIAL_URLS;
+	public static String reviewsFolderPath;
+	
+	public static String XPATH_LISTINGS = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV[2]/DIV/DIV/SPAN[2]/SPAN/UL/LI/SPAN/DIV[1]/DIV[1]/DIV[1]/DIV[3]/DIV[1]/A";
 	// Caution: XPATH_NEXT_PAGE_BUTTON points to more than one ANCHOR:
 	public static String XPATH_NEXT_PAGE_BUTTON = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV[3]/DIV/DIV/DIV/A";
-	public static String XPATH_APP_NAME = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/SPAN/DIV/DIV/DIV/DIV/H1";
+	public static String XPATH_LISTING_NAME = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/SPAN/DIV/DIV/DIV/DIV/H1";
 	public static String XPATH_SUBTITLE = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/SPAN/DIV/DIV/DIV/DIV/P";
 	public static String XPATH_REVIEW_NUMBER = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/SPAN/DIV/DIV/DIV/DIV/SPAN/P";
 	public static String XPATH_INTRO = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV/SPAN/DIV/DIV/DIV/P[2]/SPAN";
@@ -50,75 +56,101 @@ public class Conf {
 	public static String RELATIVE_XPATH_REVIEW_EXTENDED_CONTENT = "/DIV/DIV/DIV/SPAN[3]/SPAN[2]";
 	public static String XPATH_NEXT_REVIEW_PAGE_BUTTON = "/HTML/BODY/DIV/DIV/DIV/DIV/DIV/DIV/FORM/DIV/DIV[2]/DIV/DIV[3]/SPAN/SPAN[2]/SPAN/DIV/DIV/DIV/SPAN/A";
 
-	public static String[] INITIAL_URLS = {
-//			Categories:
-			"https://appexchange.salesforce.com/category/sales", // 1218 
-			"https://appexchange.salesforce.com/category/compensation", //24 // sub category
-			"https://appexchange.salesforce.com/category/contracts", // 42 // sub category
-			"https://appexchange.salesforce.com/category/dashboards", // 87  // sub category
-			"https://appexchange.salesforce.com/category/doc-generation", // 40  // sub category
-			"https://appexchange.salesforce.com/category/ecommerce", // 32  // sub category
-			"https://appexchange.salesforce.com/category/email-calendar", // 66  // sub category
-			"https://appexchange.salesforce.com/category/forecasting", // 37  // sub category
-			"https://appexchange.salesforce.com/category/geolocation", // 50 // sub category
-			"https://appexchange.salesforce.com/category/partners", // 26  // sub category
-			"https://appexchange.salesforce.com/category/quotes-orders", // 108 // sub category
-			"https://appexchange.salesforce.com/category/intelligence", // 165 // sub category
-			"https://appexchange.salesforce.com/results?filter=OTH_a0L3000000OvSOEEA3", // 153  // sub category
+	private static String[] fetchInitialURLArray(JSONObject json) {
+		JSONArray array = (JSONArray) json.get("initial urls");
+		String[] initialURLS = new String[array.size()];
+		System.out.println(array.size() + " initial URLs found");
+		for (int i = 0; i < array.size(); i++) {
+			initialURLS[i] = (String) array.get(i);
+		}
+		return initialURLS;
+	}
 
-			"https://appexchange.salesforce.com/category/service", // 338
-			"https://appexchange.salesforce.com/category/marketing", // 286
-			"https://appexchange.salesforce.com/category/it-admin", // 616
-			"https://appexchange.salesforce.com/category/hr", // 96
-			"https://appexchange.salesforce.com/category/finance", // 207
-			"https://appexchange.salesforce.com/category/collaboration", // 386
-			"https://appexchange.salesforce.com/category/erp", // 82
-			"https://appexchange.salesforce.com/category/analytics", // 61
-//			Editions:
-			"https://appexchange.salesforce.com/results?filter=GE", // Group
-			"https://appexchange.salesforce.com/results?filter=PE", // Professional
-			"https://appexchange.salesforce.com/results?filter=EE", // Enterprise
-			"https://appexchange.salesforce.com/results?filter=UE", // Unlimited
-			"https://appexchange.salesforce.com/results?filter=PP", // Performance
-			"https://appexchange.salesforce.com/results?filter=FE", // Force.com
-			"https://appexchange.salesforce.com/results?filter=DE", // Developer
-//			Filters:
-			"https://appexchange.salesforce.com/results?sort=2&filter=9", // Managed, sort by provider
-			"https://appexchange.salesforce.com/results?sort=3&filter=9", // Managed, sort by rating
-			"https://appexchange.salesforce.com/results?filter=9,GE", // Managed, Group Edition
-			"https://appexchange.salesforce.com/results?filter=9,2,PE", // Managed, Professional Edition, Paid
-			"https://appexchange.salesforce.com/results?filter=9,1,PE", // Managed, Professional Edition, Free
-			"https://appexchange.salesforce.com/results?filter=9,8,PE", // Managed, Professional Edition, Discounted for non profits
-			"https://appexchange.salesforce.com/results?filter=9,1,EE", // Managed, Enterprise, Free 
-			"https://appexchange.salesforce.com/results?filter=9,1,lg=en", // Managed, Free, English
-			"https://appexchange.salesforce.com/results?filter=9,2,lg=en", // managed, paid, English
-			"https://appexchange.salesforce.com/results?filter=9,2,rt1,lg=en", // Managed, Paid, 1stars&up
-			"https://appexchange.salesforce.com/results?filter=9,2,EE", // Managed, Enterprise, Paid
-			"https://appexchange.salesforce.com/results?filter=9,2,EE,rt1", // Managed, Enterprise, 1starsand up, paid
-			
-			
-			"https://appexchange.salesforce.com/results?sort=3&filter=6", // Native
-			"https://appexchange.salesforce.com/results?sort=3&filter=10", // Mobile
-			"https://appexchange.salesforce.com/results?sort=3&filter=11,12", // iPad, iPhone
-			"https://appexchange.salesforce.com/results?sort=3&filter=13", // Android
-			"https://appexchange.salesforce.com/results?sort=3&filter=16", // Marketing cloud
-			"https://appexchange.salesforce.com/results?sort=3&filter=14", // Salesforce1
-			"https://appexchange.salesforce.com/results?sort=3&filter=15", // Lightning Ready
-//			Languages:
-			"https://appexchange.salesforce.com/results?filter=lg=nl", // Dutch
-			"https://appexchange.salesforce.com/results?filter=lg=fi", // Finnish
-			"https://appexchange.salesforce.com/results?filter=lg=fr", // French
-			"https://appexchange.salesforce.com/results?filter=lg=de", // German
-			"https://appexchange.salesforce.com/results?filter=lg=da", // Danish
-			"https://appexchange.salesforce.com/results?filter=lg=it", // Italian
-			"https://appexchange.salesforce.com/results?filter=lg=ja", // Japanese
-			"https://appexchange.salesforce.com/results?filter=lg=ko", // Korean
-			"https://appexchange.salesforce.com/results?filter=lg=pt", // Portuguese
-			"https://appexchange.salesforce.com/results?filter=lg=ru", // Russian
-			"https://appexchange.salesforce.com/results?filter=lg=zh_CN", // Simplified Chinese
-			"https://appexchange.salesforce.com/results?filter=lg=es", // Spanish
-			"https://appexchange.salesforce.com/results?filter=lg=sv", // Swedish
-			"https://appexchange.salesforce.com/results?filter=lg=th", // Thai
-			"https://appexchange.salesforce.com/results?filter=lg=zh_TW", // Traditional Chinese
-			}; 
+	public static void readConfFile() {
+		FileReader reader = null;
+		try {
+			reader = new FileReader(configFile);
+		} catch (IOException e) {
+			System.err.print("IO Exception, Config could not be opened.");
+			e.printStackTrace();
+			System.exit(1);
+		}
+		JSONParser parser = new JSONParser();
+		JSONObject json = null;
+		System.out.println("reading conf file: " + configFile);
+
+		try {
+			json = (JSONObject) parser.parse(reader);
+		} catch (IOException | ParseException e1) {
+			System.err.print("IO Exception, Config could not be parsed.");
+			e1.printStackTrace();
+			System.exit(1);
+		}
+
+		try {
+			INITIAL_URLS = fetchInitialURLArray(json);
+		} catch (Exception e) {
+			System.err.println("Failed to load the initial array of page URLs");
+			System.exit(1);
+		}
+		try {
+			outputFile = (String) json.get("output file");
+		} catch (Exception e) {
+			System.err.println("Failed to load the name of the output file");
+			System.exit(1);
+		}
+		try {
+			uRLsCachePath = (String) json.get("cached listing urls file");
+		} catch (Exception e) {
+			System.err.println("Failed to load the path of the cache file.");
+			System.exit(1);
+		}
+		try {
+			reviewsFolderPath = (String) json.get("reviews' folder");
+		} catch (Exception e) {
+			System.err.println("Failed to load the folder of the reviews files.");
+			System.exit(1);
+		}
+		try {
+			URLsCached = fetchAreURLsCached(json);
+		} catch (Exception e) {
+			System.err.println("Failed to check if cached.");
+			System.exit(1);
+		}
+		try {
+
+			START_INDEX = Integer.parseInt((String) json.get("start index"));
+		} catch (Exception e) {
+			System.err.println("Failed to laod start index.");
+			System.exit(1);
+		}
+		try {
+			END_INDEX = Integer.parseInt((String) json.get("end index"));
+		} catch (Exception e) {
+			System.err.println("End index not set, Setting the END_INDEX to integer max.");
+		}
+		try {
+			scrapingThreads = Integer.parseInt((String) json.get("number of threads"));
+		} catch (Exception e) {
+			System.out.println("Number of threads not set, Setting the scrapingThreads default " + scrapingThreads + ".");
+		}
+		try {
+			reader.close();
+		} catch (IOException e) {
+			System.out.println("FileReader failed to close() the " + configFile);
+			e.printStackTrace();
+		}
+
+	}
+
+	private static boolean fetchAreURLsCached(JSONObject json) {
+
+		String bool = (String) json.get("are Listing URLs cached");
+		if (bool.equals("true")) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 }
